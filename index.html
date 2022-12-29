@@ -13,16 +13,64 @@
 			position: absolute;
 			top: 0;
 			left: 0;
+			z-index: -1;
+		}
+
+		.customize {
+			position: absolute;
+			top: 0;
+			left: 0;
+			padding: 10px;
+			color: white;
+		}
+
+		.customize a {
+			color: white;
+		}
+
+		a {
+			text-decoration: none;
+		}
+
+		a:hover {
+			text-decoration: underline;
 		}
 	</style>
 </head>
 <body>
+	<div class="customize">
+		<p>
+			<label for="numberOfParticles">Number of particles</label>
+			<input type="number" id="numberOfParticles" value="100" />
+		</p>
+		<p>
+			<label for="particleSize">Particle size</label>
+			<input type="number" id="particleSize" value="3" />
+		</p>
+		<p>
+			<label for="mouseParticleSize">Mouse particle size</label>
+			<input type="number" id="mouseParticleSize" value="15" />
+		</p>
+		<p>
+			<label for="areaSize">Connection area size</label>
+			<input type="number" id="areaSize" value="200" />
+		</p>
+	</div>
 	<canvas></canvas>
 
 	<script>
-		const NUMBER_OF_PARTICLES = 100;
-		const PARTICLE_SIZE = 3;
-		const MOUSE_PARTICLE_SIZE = PARTICLE_SIZE * 3;
+		const inputs = document.querySelectorAll("input");
+		const [nopInput, psInput, mpsInput, asInput] = inputs;
+
+		let numberOfParticles = nopInput.valueAsNumber;
+		let particleSize = psInput.valueAsNumber;
+		let mouseParticleSize = mpsInput.valueAsNumber;
+		let areaSize = asInput.valueAsNumber;
+
+		nopInput.addEventListener("input", () => (numberOfParticles = nopInput.valueAsNumber));
+		psInput.addEventListener("input", () => (particleSize = psInput.valueAsNumber));
+		mpsInput.addEventListener("input", () => (mouseParticleSize = mpsInput.valueAsNumber));
+		asInput.addEventListener("input", () => (areaSize = asInput.valueAsNumber));
 
 		class Particle {
 			constructor(x, y) {
@@ -33,13 +81,13 @@
 				this.color = `hsl(${Math.floor(Math.random() * 180 + 180)}, 100%, 50%)`;
 			}
 
-			getAreaParticles(areaSizeX, areaSizeY) {
+			getParticlesFromArea(areaSize) {
 				const array = [];
 
-				const startX = this.x - areaSizeX / 2;
-				const startY = this.y - areaSizeY / 2;
-				const endX = startX + areaSizeX;
-				const endY = startY + areaSizeY;
+				const startX = this.x - areaSize / 2;
+				const startY = this.y - areaSize / 2;
+				const endX = startX + areaSize;
+				const endY = startY + areaSize;
 
 				for (let particle of particles) {
 					if (particle.x > startX && particle.x < endX
@@ -60,7 +108,7 @@
 			draw() {
 				ctx.fillStyle = this.color;
 				ctx.beginPath();
-				ctx.arc(this.x, this.y, PARTICLE_SIZE, 0, 2 * Math.PI);
+				ctx.arc(this.x, this.y, particleSize, 0, 2 * Math.PI);
 				ctx.fill();
 			}
 		}
@@ -71,22 +119,15 @@
 				this.color = "white";
 			}
 
-			update() {}
+			update() {
+				this.x = mouseX;
+				this.y = mouseY;
+			}
 
 			draw() {
 				ctx.fillStyle = this.color;
 				ctx.beginPath();
-				ctx.arc(this.x, this.y, MOUSE_PARTICLE_SIZE, 0, 2 * Math.PI);
-				ctx.fill();
-
-				const gradient = ctx.createRadialGradient(this.x, this.y, MOUSE_PARTICLE_SIZE, this.x, this.y, MOUSE_PARTICLE_SIZE * 5);
-				gradient.addColorStop(0, this.color);
-				gradient.addColorStop(0.5, "rgba(255, 255, 255, 0.3)");
-				gradient.addColorStop(1, "rgba(255, 255, 255, 0.1)");
-
-				ctx.fillStyle = gradient;
-				ctx.beginPath();
-				ctx.arc(this.x, this.y, MOUSE_PARTICLE_SIZE * 5, 0, 2 * Math.PI);
+				ctx.arc(this.x, this.y, mouseParticleSize, 0, 2 * Math.PI);
 				ctx.fill();
 			}
 		}
@@ -96,6 +137,9 @@
 
 		const particles = [];
 		const mouseParticle = new MouseParticle(0, 0);
+
+		let mouseX = 0;
+		let mouseY = 0;
 
 		particles.push(mouseParticle);
 
@@ -109,30 +153,32 @@
 			ctx = canvas.getContext("2d");
 
 			for (let particle of particles) {
-				if (particle instanceof MouseParticle) return;
+				if (particle instanceof MouseParticle) continue;
 
 				if (particle.x > window.innerWidth || particle.x < 0 || particle.y > window.innerHeight || particle.y < 0) {
 					particles.splice(particles.indexOf(particle), 1);
-					particles.push(new Particle(Math.random() * window.innerWidth - PARTICLE_SIZE,
-						Math.random() * window.innerHeight - PARTICLE_SIZE));
+					particles.push(new Particle(Math.random() * (window.innerWidth - particleSize) + particleSize,
+						Math.random() * (window.innerHeight - particleSize) + particleSize));
 				}
 			}
 		});
 		window.addEventListener("mousemove", (e) => {
-			mouseParticle.x = e.pageX;
-			mouseParticle.y = e.pageY;
+			mouseX = e.pageX;
+			mouseY = e.pageY;
 		});
 
 		function createParticles() {
-			for (let i = 0; i < NUMBER_OF_PARTICLES; i++) particles.push(new Particle(Math.random() * window.innerWidth - PARTICLE_SIZE,
-				Math.random() * window.innerHeight - PARTICLE_SIZE));
+			for (let i = 0; i < numberOfParticles; i++)
+				particles.push(new Particle(Math.random() * (window.innerWidth - particleSize) + particleSize,
+					Math.random() * (window.innerHeight - particleSize) + particleSize));
 		}
 
 		function animate() {
 			ctx.clearRect(0, 0, canvas.width, canvas.height);
 
 			for (let particle of particles) {
-				drawLines(particle, window.innerWidth / 6, window.innerHeight / 6);
+				drawLines(particle,
+					areaSize);
 				particle.update();
 				particle.draw();
 			}
@@ -140,34 +186,50 @@
 			requestAnimationFrame(animate);
 		}
 
-		function drawLines(particle, areaSizeX, areaSizeY) {
-			for (let ap of particle.getAreaParticles(areaSizeX, areaSizeY)) {
-				const gradient = ctx.createLinearGradient(particle.x, particle.y, ap.x, ap.y);
+		function drawLines(particle, areaSize) {
+			for (let p of particle.getParticlesFromArea(areaSize)) {
+				const gradient = ctx.createLinearGradient(particle.x, particle.y, p.x, p.y);
 				gradient.addColorStop(0, particle.color);
-				gradient.addColorStop(1, ap.color);
+				gradient.addColorStop(1, p.color);
 
-				if (ap instanceof MouseParticle) {
+				if (p instanceof MouseParticle) {
 					ctx.fillStyle = gradient;
-					ctx.beginPath();
-					ctx.moveTo(ap.x - MOUSE_PARTICLE_SIZE - 1, ap.y);
-					ctx.lineTo(ap.x + MOUSE_PARTICLE_SIZE - 1, ap.y);
-					ctx.lineTo(particle.x, particle.y);
-					ctx.fill();
+					
+					if (particleSize > mouseParticleSize) {
+						ctx.beginPath();
+						ctx.moveTo(particle.x - (particleSize + 1), particle.y);
+						ctx.lineTo(particle.x + (particleSize - 1), particle.y);
+						ctx.lineTo(p.x, p.y);
+						ctx.fill();
 
-					ctx.beginPath();
-					ctx.moveTo(ap.x, ap.y - MOUSE_PARTICLE_SIZE - 1);
-					ctx.lineTo(ap.x, ap.y + MOUSE_PARTICLE_SIZE - 1);
-					ctx.lineTo(particle.x, particle.y);
-					ctx.fill();
+						ctx.beginPath();
+						ctx.moveTo(particle.x, particle.y - (particleSize + 1));
+						ctx.lineTo(particle.x, particle.y + (particleSize - 1));
+						ctx.lineTo(p.x, p.y);
+						ctx.fill();
+					} else {
+						ctx.beginPath();
+						ctx.moveTo(p.x - (mouseParticleSize + 1), p.y);
+						ctx.lineTo(p.x + (mouseParticleSize - 1), p.y);
+						ctx.lineTo(particle.x, particle.y);
+						ctx.fill();
 
-					return;
+						ctx.beginPath();
+						ctx.moveTo(p.x, p.y - (mouseParticleSize + 1));
+						ctx.lineTo(p.x, p.y + (mouseParticleSize - 1));
+						ctx.lineTo(particle.x, particle.y);
+						ctx.fill();
+					}
+
+					continue;
 				}
 
 				ctx.strokeStyle = gradient;
+				ctx.lineWidth = particleSize / 3;
 
 				ctx.beginPath();
 				ctx.moveTo(particle.x, particle.y);
-				ctx.lineTo(ap.x, ap.y);
+				ctx.lineTo(p.x, p.y);
 				ctx.stroke();
 			}
 		}
