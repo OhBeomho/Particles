@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta http-equiv="X-UA-Compatible" content="IE=edge">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Particles</title>
+	<style>
+		canvas {
+			background-color: rgb(20, 20, 20);
+			width: 100%;
+			height: 100%;
+			position: absolute;
+			top: 0;
+			left: 0;
+		}
+	</style>
+</head>
+<body>
+	<canvas></canvas>
+
+	<script>
+		const NUMBER_OF_PARTICLES = 100;
+		const PARTICLE_SIZE = 3;
+		const MOUSE_PARTICLE_SIZE = PARTICLE_SIZE * 3;
+
+		class Particle {
+			constructor(x, y) {
+				this.x = x;
+				this.y = y;
+				this.speedX = Math.random() * 4 - 2;
+				this.speedY = Math.random() * 4 - 2;
+				this.color = `hsl(${Math.floor(Math.random() * 180 + 180)}, 100%, 50%)`;
+			}
+
+			getAreaParticles(areaSizeX, areaSizeY) {
+				const array = [];
+
+				const startX = this.x - areaSizeX / 2;
+				const startY = this.y - areaSizeY / 2;
+				const endX = startX + areaSizeX;
+				const endY = startY + areaSizeY;
+
+				for (let particle of particles) {
+					if (particle.x > startX && particle.x < endX
+						&& particle.y > startY && particle.y < endY) array.push(particle);
+				}
+
+				return array;
+			}
+
+			update() {
+				this.x += this.speedX;
+				this.y += this.speedY;
+
+				if (this.x > window.innerWidth || this.x < 0) this.speedX = -this.speedX;
+				if (this.y > window.innerHeight || this.y < 0) this.speedY = -this.speedY;
+			}
+
+			draw() {
+				ctx.fillStyle = this.color;
+				ctx.beginPath();
+				ctx.arc(this.x, this.y, PARTICLE_SIZE, 0, 2 * Math.PI);
+				ctx.fill();
+			}
+		}
+
+		class MouseParticle extends Particle {
+			constructor(x, y) {
+				super(x, y);
+				this.color = "white";
+			}
+
+			update() {}
+
+			draw() {
+				ctx.fillStyle = this.color;
+				ctx.beginPath();
+				ctx.arc(this.x, this.y, MOUSE_PARTICLE_SIZE, 0, 2 * Math.PI);
+				ctx.fill();
+
+				const gradient = ctx.createRadialGradient(this.x, this.y, MOUSE_PARTICLE_SIZE, this.x, this.y, MOUSE_PARTICLE_SIZE * 5);
+				gradient.addColorStop(0, this.color);
+				gradient.addColorStop(0.5, "rgba(255, 255, 255, 0.3)");
+				gradient.addColorStop(1, "rgba(255, 255, 255, 0.1)");
+
+				ctx.fillStyle = gradient;
+				ctx.beginPath();
+				ctx.arc(this.x, this.y, MOUSE_PARTICLE_SIZE * 5, 0, 2 * Math.PI);
+				ctx.fill();
+			}
+		}
+
+		const canvas = document.querySelector("canvas");
+		let ctx = canvas.getContext("2d");
+
+		const particles = [];
+		const mouseParticle = new MouseParticle(0, 0);
+
+		particles.push(mouseParticle);
+
+		function initCanvas() {
+			canvas.width = window.innerWidth;
+			canvas.height = window.innerHeight;
+		}
+
+		window.addEventListener("resize", () => {
+			initCanvas();
+			ctx = canvas.getContext("2d");
+
+			for (let particle of particles) {
+				if (particle instanceof MouseParticle) return;
+
+				if (particle.x > window.innerWidth || particle.x < 0 || particle.y > window.innerHeight || particle.y < 0) {
+					particles.splice(particles.indexOf(particle), 1);
+					particles.push(new Particle(Math.random() * window.innerWidth - PARTICLE_SIZE,
+						Math.random() * window.innerHeight - PARTICLE_SIZE));
+				}
+			}
+		});
+		window.addEventListener("mousemove", (e) => {
+			mouseParticle.x = e.pageX;
+			mouseParticle.y = e.pageY;
+		});
+
+		function createParticles() {
+			for (let i = 0; i < NUMBER_OF_PARTICLES; i++) particles.push(new Particle(Math.random() * window.innerWidth - PARTICLE_SIZE,
+				Math.random() * window.innerHeight - PARTICLE_SIZE));
+		}
+
+		function animate() {
+			ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+			for (let particle of particles) {
+				drawLines(particle, window.innerWidth / 6, window.innerHeight / 6);
+				particle.update();
+				particle.draw();
+			}
+
+			requestAnimationFrame(animate);
+		}
+
+		function drawLines(particle, areaSizeX, areaSizeY) {
+			for (let ap of particle.getAreaParticles(areaSizeX, areaSizeY)) {
+				const gradient = ctx.createLinearGradient(particle.x, particle.y, ap.x, ap.y);
+				gradient.addColorStop(0, particle.color);
+				gradient.addColorStop(1, ap.color);
+
+				if (ap instanceof MouseParticle) {
+					ctx.fillStyle = gradient;
+					ctx.beginPath();
+					ctx.moveTo(ap.x - MOUSE_PARTICLE_SIZE - 1, ap.y);
+					ctx.lineTo(ap.x + MOUSE_PARTICLE_SIZE - 1, ap.y);
+					ctx.lineTo(particle.x, particle.y);
+					ctx.fill();
+
+					ctx.beginPath();
+					ctx.moveTo(ap.x, ap.y - MOUSE_PARTICLE_SIZE - 1);
+					ctx.lineTo(ap.x, ap.y + MOUSE_PARTICLE_SIZE - 1);
+					ctx.lineTo(particle.x, particle.y);
+					ctx.fill();
+
+					return;
+				}
+
+				ctx.strokeStyle = gradient;
+
+				ctx.beginPath();
+				ctx.moveTo(particle.x, particle.y);
+				ctx.lineTo(ap.x, ap.y);
+				ctx.stroke();
+			}
+		}
+
+		createParticles();
+		initCanvas();
+		animate();
+	</script>
+</body>
+</html>
